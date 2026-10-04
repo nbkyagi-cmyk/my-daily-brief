@@ -1,0 +1,36 @@
+name: Deploy public UI
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**', 'tests/**', '.github/workflows/pages-ui.yml']
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: daily-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - run: python -m unittest discover -s tests -v
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs
+      - id: deployment
+        uses: actions/deploy-pages@v4
