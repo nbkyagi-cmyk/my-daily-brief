@@ -1,4 +1,4 @@
-import datetime as dt
+﻿import datetime as dt
 import hashlib
 import html
 import json
@@ -142,7 +142,7 @@ def update(run, category, demo=False):
             except Exception as e:
                 errors.append(source['name']+': '+type(e).__name__)
         finish(run,'partial' if errors and successes else 'failed' if errors else 'success',added,' / '.join(errors))
-        if not demo:
+        if not demo and DB.resolve() == (ROOT / 'data/news.db').resolve():
             export_public_json()
     except Exception as e: finish(run,'failed',added,str(e))
 
