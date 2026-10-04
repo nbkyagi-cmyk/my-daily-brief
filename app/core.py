@@ -142,7 +142,37 @@ def update(run, category, demo=False):
             except Exception as e:
                 errors.append(source['name']+': '+type(e).__name__)
         finish(run,'partial' if errors and successes else 'failed' if errors else 'success',added,' / '.join(errors))
+        if not demo:
+            export_public_json()
     except Exception as e: finish(run,'failed',added,str(e))
+
+
+def export_public_json():
+    """GitHub Pages ???? JSON ????DB???????"""
+    with connect() as c:
+        articles = [
+            dict(r) for r in c.execute(
+                "SELECT * FROM articles ORDER BY first_seen DESC LIMIT 1000"
+            )
+        ]
+
+    for a in articles:
+        a["summary"] = json.loads(a["summary"])
+        a["analysis"] = json.loads(a["analysis"])
+
+    output = ROOT / "public" / "articles.json"
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    payload = {
+        "generated_at": dt.datetime.now(JST).isoformat(),
+        "articles": articles,
+    }
+
+    output.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
 
 def snapshot():
     with connect() as c:
