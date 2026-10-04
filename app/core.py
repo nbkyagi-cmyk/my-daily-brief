@@ -23,8 +23,23 @@ RESULT = re.compile(r'試合|優勝|準優勝|勝利|敗れ|敗退|決勝|準決
 PUBLIC_INTEREST = re.compile(r'政府|国会|首相|大統領|閣僚|政策|法案|法改正|予算|補助金|税金|税制|財政|選挙|外交|制裁|停戦|戦争|紛争|侵攻|経済|金融|金利|物価|株価|為替|関税|GDP|雇用|賃金|倒産|買収|汚職|収賄|不正|人権|災害|地震|津波|洪水|避難|断水|水道|下水道|インフラ|無電柱化|地中化|老朽化|耐震|感染|医療|教育|社会保障|裁判|逮捕|事故|被害|死亡', re.I)
 
 
+def is_nhk_one_url(url):
+    """NHK ONE NEWS WEB links, identified by host/path, never headline/source.
+
+    The configured NHK RSS redirects to news.web.nhk and calls itself
+    NHKONEニュース. Its article links use /newsweb/na/ on this host.
+    Keep ordinary nhk.or.jp news and unrelated hosts untouched.
+    """
+    parsed = urllib.parse.urlsplit(url)
+    host = (parsed.hostname or '').lower().rstrip('.')
+    path = urllib.parse.unquote(parsed.path)
+    return host == 'news.web.nhk' and (path == '/newsweb' or path.startswith('/newsweb/'))
+
+
 def ai_selection(article):
     """Return an explainable decision without an API call or changing facts."""
+    if is_nhk_one_url(article.get('url', '')):
+        return 'excluded_source'
     title = article['title']
     text = title + ' ' + ' '.join(article.get('summary', []))
     if PUBLIC_INTEREST.search(text):
@@ -110,7 +125,7 @@ def parse(data, source, category, keywords=None, upgrade_mlit_links=False):
             url=link.get('href','') if link is not None else ''
         if upgrade_mlit_links and url.startswith('http://www.mlit.go.jp/') and urllib.parse.urlsplit(url).netloc == 'www.mlit.go.jp':
             url='https://' + url[len('http://'):]
-        if not url.startswith('https://'): continue
+        if not url.startswith('https://') or is_nhk_one_url(url): continue
         title=clean(value(e,'title'))
         if not title: continue
         desc=clean(value(e,'description') or value(e,'summary'))
@@ -157,9 +172,11 @@ def update(run, category, demo=False):
                 else: data=fetch(source['url'])
                 keywords = None if demo else source.get('keywords')
                 articles=parse(data,source['name'],source['category'],keywords,source.get('upgrade_mlit_links', False))
-                if not articles and keywords is None: raise ValueError('記事を取得できませんでした')
+                # A valid feed can contain only intentionally excluded links.
+                # Parsing errors still fail; an empty eligible feed is successful.
                 successes+=1
                 for a in articles:
+                    if is_nhk_one_url(a['url']): continue
                     with connect() as c: exists=c.execute('SELECT 1 FROM articles WHERE id=?',(a['id'],)).fetchone()
                     if exists: continue
                     if time.monotonic()>deadline: raise TimeoutError('処理時間上限')
@@ -197,7 +214,7 @@ def export_public_json():
         articles = [
             dict(r) for r in c.execute(
                 "SELECT * FROM articles ORDER BY first_seen DESC LIMIT 1000"
-            )
+            ) if not is_nhk_one_url(r['url'])
         ]
 
     for a in articles:
@@ -220,7 +237,7 @@ def export_public_json():
 
 def snapshot():
     with connect() as c:
-        articles=[dict(r) for r in c.execute('SELECT * FROM articles ORDER BY first_seen DESC LIMIT 1000')]
+        articles=[dict(r) for r in c.execute('SELECT * FROM articles ORDER BY first_seen DESC LIMIT 1000') if not is_nhk_one_url(r['url'])]
         runs=[dict(r) for r in c.execute('SELECT * FROM runs ORDER BY id DESC LIMIT 50')]
         last=c.execute("SELECT ended FROM runs WHERE status='success' AND category='all' ORDER BY id DESC LIMIT 1").fetchone()
     for a in articles:

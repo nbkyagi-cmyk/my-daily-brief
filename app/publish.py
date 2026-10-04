@@ -25,6 +25,7 @@ def restore_history(path):
         if not isinstance(a['analysis'], dict) or set(a['analysis']) != {'importance', 'background', 'why', 'outlook'} or not all(isinstance(s, str) for s in a['analysis'].values()):
             raise ValueError('Invalid analysis')
         ids.add(a['id'])
+    payload = dict(payload, articles=[a for a in payload['articles'] if not core.is_nhk_one_url(a['url'])])
     with core.connect() as c:
         if c.execute('SELECT COUNT(*) FROM articles').fetchone()[0]:
             raise ValueError('Restore requires an empty DB')
