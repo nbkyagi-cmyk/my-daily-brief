@@ -1,0 +1,82 @@
+[
+  {
+    "name": "NHK 主要ニュース",
+    "category": "総合ニュース",
+    "url": "https://www.nhk.or.jp/rss/news/cat0.xml"
+  },
+  {
+    "name": "NHK 政治",
+    "category": "政治",
+    "url": "https://www.nhk.or.jp/rss/news/cat4.xml"
+  },
+  {
+    "name": "NHK 経済",
+    "category": "経済",
+    "url": "https://www.nhk.or.jp/rss/news/cat5.xml"
+  },
+  {
+    "name": "NHK 国際",
+    "category": "国際",
+    "url": "https://www.nhk.or.jp/rss/news/cat6.xml"
+  },
+  {
+    "name": "国土交通省 プレスリリース",
+    "category": "水道・インフラ",
+    "url": "https://www.mlit.go.jp/pressrelease.rdf",
+    "keywords": [
+      "水道",
+      "上水道",
+      "下水道",
+      "上下水道",
+      "配水管",
+      "管路",
+      "耐震化",
+      "老朽化",
+      "更新"
+    ],
+    "upgrade_mlit_links": true
+  },
+  {
+    "name": "国土交通省 新着情報",
+    "category": "水道・インフラ",
+    "url": "https://www.mlit.go.jp/index.rdf",
+    "keywords": [
+      "水道",
+      "上水道",
+      "下水道",
+      "上下水道",
+      "配水管",
+      "管路",
+      "耐震化",
+      "老朽化",
+      "更新"
+    ],
+    "upgrade_mlit_links": true
+  },
+  {
+    "name": "国土交通省 プレスリリース",
+    "category": "無電柱化",
+    "url": "https://www.mlit.go.jp/pressrelease.rdf",
+    "keywords": [
+      "無電柱化",
+      "電線共同溝",
+      "共同溝",
+      "地中化",
+      "電線類地中化"
+    ],
+    "upgrade_mlit_links": true
+  },
+  {
+    "name": "国土交通省 新着情報",
+    "category": "無電柱化",
+    "url": "https://www.mlit.go.jp/index.rdf",
+    "keywords": [
+      "無電柱化",
+      "電線共同溝",
+      "共同溝",
+      "地中化",
+      "電線類地中化"
+    ],
+    "upgrade_mlit_links": true
+  }
+]
