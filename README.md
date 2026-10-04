@@ -50,7 +50,7 @@ AI分析を有効にする場合はサーバーに `OPENAI_API_KEY` を設定し
 
 ## スマホ運用と本番
 
-常時動くサーバー、永続ディスク、HTTPSのURLが必要です。GitHub Pagesだけでは管理更新・DB保存が動きません。Pythonサーバーはローカル用HTTPのため、本番はTLS終端・アクセス制限・リクエスト上限を持つリバースプロキシの背後で1プロセスだけ起動してください。
+ローカルサーバーの管理画面を使う場合は、常時動くサーバー、永続ディスク、HTTPSのURLが必要です。GitHub Pagesの閲覧専用サイトは、下記GitHub Actions方式ならPCオフで更新できます。Pythonサーバーはローカル用HTTPのため、本番はTLS終端・アクセス制限・リクエスト上限を持つリバースプロキシの背後で1プロセスだけ起動してください。
 
 1. サーバーにプロジェクトを配置し、データディスクを `MDB_DB` で指定（例 `/var/lib/mydailybrief/news.db`）。
 2. 長い管理パスワードと別のランダム32文字以上の `MDB_SCHEDULE_TOKEN` を環境変数に設定。
@@ -80,15 +80,22 @@ Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/login' -Method Post -ContentTy
 
 `REPAIR-REPORT.md` に元ZIPの再現結果・変更内容・テスト結果を記載しています。ZIPには元のDBとPythonキャッシュを混入させず、初回起動時にデモDBを生成します。元DBは変更していない元ZIPのバックアップに保存されています。テスト用の `MDB_DEMO_DB` を指定すればデモDBの保存先だけを分離できます（実データ用MDB_DBとは別設定）。
 
-## 本番だけGitHub Actions
+## GitHub Actionsで毎日更新（PCオフで利用可能）
 
-独立したGitHubリポジトリに配置し、Secretsに `MDB_URL`（HTTPSのサイトURL）と `MDB_SCHEDULE_TOKEN` を登録してください。既存PPI Monitorの設定を変更する必要はありません。今回GitHubへの公開・本番デプロイは行っていません。
+毎日18:07 JST（09:07 UTC）にActions自身がニュースを取得します。Actions画面の「Daily production update → Run workflow」でも実行できます。スケジュールには遅延があり、非活動状態の公開リポジトリでは停止されることがあります。
 
-ワークフローは毎日09:07 UTC＝18:07 JSTのscheduleのみ。push、PR、workflow_dispatchのトリガーはありません。Ubuntuランナー、ジョブ上限15分。サーバーは14分の内部予算と約15分の子プロセス強制終了を持ちます。Actionsはサーバーの完了を確認して成功/失敗を反映します。スマホ手動更新は `/api/update` からサーバーを直接起動し、GitHubには接続しません。同日の自動全更新成功済みなら再実行を省略します。
+初回設定:
 
-目標は5〜10分/日＝約150〜300分/月。実際の時間は取得元数とAI応答に依存し、実運用で測定してください。上限15分を毎日使うと31日で465分なので、300分は保証値ではありません。ランナー待機時間も消費時間に含めて考えます。無料枠はプラン・公開/非公開などに依存するため、2,000分固定とは扱いません。アカウント全体でPPI Monitorと合算した使用量と予算を確認してください。
+1. Settings → Secrets and variables → Actions → Secrets に `OPENAI_API_KEY` を登録します。
+2. 同画面の Variables に `MDB_AI_LIMIT` を設定します。既定12、新着の先頭から最大この件数を分析します。例: `3`。`0` はAI分析を無効にし、キーも不要です。既存記事は再分析しません。分析失敗も上限枠を消費し、自動再試行はありません。
+3. Settings → Pages → Build and deployment → Source を **GitHub Actions** に変更します。公開対象は引き続きmainの `docs`、URLも同じです。ActionsのGITHUB_TOKENによる自動コミットは別のPagesビルドを起動しないため、このworkflowが `docs` を直接デプロイします。
+4. Actionsの「Daily production update」でRun workflowを実行して確認します。mainへの書き込みがブランチ保護で拒否される場合は、Actionsの書き込みを許可する設定が必要です。
 
-GitHub公式： [課金条件](https://docs.github.com/en/billing/concepts/product-billing/github-actions) / [スケジュールの遅延](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)。スケジュール停止・遅延は19時以降の警告と手動復旧で補います。
+`python -m app.publish` は `docs/articles.json` を唯一の公開履歴として一時SQLite DBへ復元します。ID・日時・概要・分析を保持し、新着のみ取得・分析します。ローカル本番 `data/news.db` は開きません。更新後は `public/articles.json` と `docs/articles.json` を同じ内容で保存し、workflowがこの2ファイルだけをcommit/pushします。DB、バックアップ、APIキーはコミット・Pages成果物に含めません。取得元とローカルサーバーの機能は従来どおりです。旧Actions用のMDB_URLとMDB_SCHEDULE_TOKENはこのworkflowでは不要です。
+
+全面取得失敗・履歴不正・APIキー未設定（上限が正数）では非ゼロ終了し公開ファイルを維持します。一部のRSSやAIだけが失敗した場合は取得できた記事を公開し、Actionsログに警告と更新結果を表示します。AI失敗記事は未評価のまま保存します。新着0件では更新日時を変えません。公開履歴は1000件で切り捨てず全件保持します（ローカル画面の表示上限は従来どおり1000件）。
+
+並行workflowは直列化し、push時にmainが変更されていれば公開を止めます。最新mainから手動で再実行してください。テストは毎回APIキーを渡す前に実施します。実ニュース更新だけにキーを渡します。Actions更新はローカルPCのDBへ同期されません。
 
 ## 保存・バックアップ
 

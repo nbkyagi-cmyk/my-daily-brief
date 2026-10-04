@@ -2,33 +2,56 @@ name: Daily production update
 on:
   schedule:
     - cron: '7 9 * * *'
+  workflow_dispatch:
 permissions: {}
 concurrency:
   group: daily-production
   cancel-in-progress: false
 jobs:
   update:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    permissions:
+      contents: write
     steps:
-      - name: Update production server and wait for result
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Run all tests
+        run: python -m unittest discover -s tests -v
+      - name: Restore history, fetch news and analyze new articles
         env:
-          MDB_URL: ${{ secrets.MDB_URL }}
-          MDB_SCHEDULE_TOKEN: ${{ secrets.MDB_SCHEDULE_TOKEN }}
-        shell: python
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          MDB_AI_LIMIT: ${{ vars.MDB_AI_LIMIT || '12' }}
+        run: python -m app.publish
+      - name: Commit only public JSON files
         run: |
-          import json, os, time, urllib.request
-          base = os.environ['MDB_URL'].rstrip('/')
-          if not base.startswith('https://'): raise SystemExit('HTTPS URL required')
-          req = urllib.request.Request(base+'/api/scheduled', data=b'{}', headers={'Content-Type':'application/json','Authorization':'Bearer '+os.environ['MDB_SCHEDULE_TOKEN']})
-          with urllib.request.urlopen(req, timeout=30) as r: result=json.load(r)
-          if result.get('skipped'): raise SystemExit(0)
-          deadline=time.monotonic()+850
-          while time.monotonic()<deadline:
-              with urllib.request.urlopen(base+'/api/news', timeout=20) as r: data=json.load(r)
-              run=next((r for r in data['runs'] if r['id']==result['id']),None)
-              if run and run['status']!='running':
-                  print('Update status:',run['status'],'new articles:',run['added'])
-                  raise SystemExit(0 if run['status']=='success' else 1)
-              time.sleep(10)
-          raise SystemExit('Remote update timed out; inspect server update history')
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- public/articles.json docs/articles.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Update daily news'
+            # Reject concurrent main changes rather than overwrite newer history.
+            git push origin HEAD:main
+          fi
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs
+  deploy:
+    needs: update
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy updated docs
+        id: deployment
+        uses: actions/deploy-pages@v4
