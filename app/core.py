@@ -14,6 +14,33 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DB = Path(os.environ.get('MDB_DB', str(ROOT / 'data/news.db')))
 CATEGORIES = ['総合ニュース', '政治', '経済', '国際', '水道・インフラ', '無電柱化']
+DEFAULT_AI_LIMIT = 10
+AI_CATEGORIES = CATEGORIES[1:]
+# Require a sport AND a competition/performance signal. Public-interest context
+# overrides that exclusion; ambiguous headlines stay eligible in dedicated feeds.
+SPORT = re.compile(r'スポーツ|野球|ゴルフ|サッカー|テニス|ラグビー|バレー|バスケ|相撲|大相撲|五輪|オリンピック|パラリンピック|大リーグ|MLB|NBA|大谷|ドジャース|陸上|水泳', re.I)
+RESULT = re.compile(r'試合|優勝|準優勝|勝利|敗れ|敗退|決勝|準決勝|出場|選手|大会|得点|ホームラン|本塁打|打点|登板|安打|開幕|連勝|連敗|移籍|引退|金メダル|銀メダル|銅メダル|自己ベスト|新記録')
+PUBLIC_INTEREST = re.compile(r'政府|国会|首相|大統領|閣僚|政策|法案|法改正|予算|補助金|税金|税制|財政|選挙|外交|制裁|停戦|戦争|紛争|侵攻|経済|金融|金利|物価|株価|為替|関税|GDP|雇用|賃金|倒産|買収|汚職|収賄|不正|人権|災害|地震|津波|洪水|避難|断水|水道|下水道|インフラ|無電柱化|地中化|老朽化|耐震|感染|医療|教育|社会保障|裁判|逮捕|事故|被害|死亡', re.I)
+
+
+def ai_selection(article):
+    """Return an explainable decision without an API call or changing facts."""
+    title = article['title']
+    text = title + ' ' + ' '.join(article.get('summary', []))
+    if PUBLIC_INTEREST.search(text):
+        return 'priority' if article['category'] in AI_CATEGORIES else 'public_interest'
+    if SPORT.search(title) and RESULT.search(text):
+        return 'sports'
+    if article['category'] in AI_CATEGORIES:
+        return 'priority'
+    return 'outside_scope'
+
+
+def ai_candidates(articles):
+    """Round-robin dedicated categories first, preserving feed order per category."""
+    queues = [[a for a in articles if a['category'] == c and ai_selection(a) == 'priority'] for c in AI_CATEGORIES]
+    priority = [queue[i] for i in range(max(map(len, queues), default=0)) for queue in queues if i < len(queue)]
+    return priority + [a for a in articles if ai_selection(a) == 'public_interest']
 JST = dt.timezone(dt.timedelta(hours=9))
 
 class Connection(sqlite3.Connection):
@@ -111,6 +138,9 @@ def analyze(article):
 def update(run, category, demo=False):
     added=0; errors=[]; successes=0; deadline=time.monotonic()+840
     try:
+        limit = int(os.environ.get('MDB_AI_LIMIT', str(DEFAULT_AI_LIMIT)))
+        if limit < 0: raise ValueError('MDB_AI_LIMIT must be nonnegative')
+        pending = {}
         sources=json.loads((ROOT/'sources.json').read_text(encoding='utf-8'))
         if demo:
             sources=[{'name':'デモ（架空）','category':c,'url':'demo'} for c in CATEGORIES]
@@ -133,14 +163,28 @@ def update(run, category, demo=False):
                     with connect() as c: exists=c.execute('SELECT 1 FROM articles WHERE id=?',(a['id'],)).fetchone()
                     if exists: continue
                     if time.monotonic()>deadline: raise TimeoutError('処理時間上限')
-                    if not demo and added<int(os.environ.get('MDB_AI_LIMIT','12')):
-                        try: a=analyze(a)
-                        except Exception: errors.append('AI分析失敗（出典概要を保存）')
-                    with connect() as c:
-                        c.execute('INSERT OR IGNORE INTO articles VALUES(?,?,?,?,?,?,?,?,?)',tuple(a[k] if k not in ['summary','analysis'] else json.dumps(a[k],ensure_ascii=False) for k in ['id','category','title','url','source','published','first_seen','summary','analysis']))
-                    added+=1
+                    previous = pending.get(a['id'])
+                    # Same URL in general and dedicated feeds: keep the dedicated
+                    # category for new articles only. Restored history is untouched.
+                    if previous is None or (previous['category'] == '総合ニュース' and a['category'] in AI_CATEGORIES):
+                        pending[a['id']] = a
             except Exception as e:
                 errors.append(source['name']+': '+type(e).__name__)
+        articles = list(pending.values())
+        if not demo:
+            for a in articles:
+                if ai_selection(a) == 'sports':
+                    a['analysis'] = dict(importance='対象外', background='未生成', why='未生成', outlook='未生成')
+            # Slice attempts, not successful responses: failure never buys a retry.
+            for a in ai_candidates(articles)[:limit]:
+                if time.monotonic() > deadline:
+                    errors.append('AI分析時間上限（出典概要を保存）')
+                    break
+                try: analyze(a)
+                except Exception: errors.append('AI分析失敗（出典概要を保存）')
+        for a in articles:
+            with connect() as c:
+                added += c.execute('INSERT OR IGNORE INTO articles VALUES(?,?,?,?,?,?,?,?,?)',tuple(a[k] if k not in ['summary','analysis'] else json.dumps(a[k],ensure_ascii=False) for k in ['id','category','title','url','source','published','first_seen','summary','analysis'])).rowcount
         finish(run,'partial' if errors and successes else 'failed' if errors else 'success',added,' / '.join(errors))
         if not demo and DB.resolve() == (ROOT / 'data/news.db').resolve():
             export_public_json()

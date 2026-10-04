@@ -39,3 +39,7 @@ vm.runInContext('render()', context);
 assert.doesNotMatch(elements.articles.innerHTML, /javascript:/);
 assert.equal(vm.runInContext("tokyoDay('2026-10-03T16:00:00Z')", context), '2026-10-04');
 console.log('Public UI behavior passed');
+vm.runInContext("data.articles[1].analysis = {importance: '対象外'}; render();", context);
+assert.match(elements.articles.innerHTML, /スポーツ記事：AI分析対象外/);
+assert.doesNotMatch(elements.articles.innerHTML, /<strong>重要度:<\/strong> 対象外/);
+assert.match(elements.articles.innerHTML, /保存/);

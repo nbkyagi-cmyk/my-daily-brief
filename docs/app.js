@@ -86,7 +86,7 @@ function render() {
         <div class="meta">${esc(a.category)} ・ ${esc(a.source || "")}</div>
         <h3><a href="${esc(/^https:\/\//i.test(a.url) ? a.url : '#')}" target="_blank" rel="noopener noreferrer">${esc(a.title)}</a></h3>
         <ul>${summary}</ul>
-        <p><strong>重要度:</strong> ${esc(importance)}</p>
+        ${importance === '対象外' ? '<p class="muted">スポーツ記事：AI分析対象外</p>' : `<p><strong>重要度:</strong> ${esc(importance)}</p>`}
         ${analysis.background && analysis.background !== "未生成"
           ? `<p><strong>背景:</strong> ${esc(analysis.background)}</p>` : ""}
         ${analysis.why && analysis.why !== "未生成"

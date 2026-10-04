@@ -26,7 +26,7 @@ jobs:
       - name: Restore history, fetch news and analyze new articles
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          MDB_AI_LIMIT: ${{ vars.MDB_AI_LIMIT || '12' }}
+          MDB_AI_LIMIT: ${{ vars.MDB_AI_LIMIT || '10' }}
         run: python -m app.publish
       - name: Commit only public JSON files
         run: |

@@ -35,7 +35,7 @@ def restore_history(path):
 def publish():
     if os.environ.get('MDB_DEMO') == '1':
         raise ValueError('Demo publishing is forbidden')
-    limit = int(os.environ.get('MDB_AI_LIMIT', '12'))
+    limit = int(os.environ.get('MDB_AI_LIMIT', str(core.DEFAULT_AI_LIMIT)))
     if limit < 0:
         raise ValueError('MDB_AI_LIMIT must be nonnegative')
     if limit and not os.environ.get('OPENAI_API_KEY'):
