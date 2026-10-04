@@ -1,0 +1,125 @@
+{
+  "generated_at": "2026-10-04T21:19:17.371514+09:00",
+  "articles": [
+    {
+      "id": "f2f9784142e4d11e32b55059",
+      "category": "政治",
+      "title": "【デモ】政治のサンプル記事",
+      "url": "https://example.com/1",
+      "source": "デモ（架空）",
+      "published": "",
+      "first_seen": "2026-10-04T21:19:17+09:00",
+      "summary": [
+        "これは動作確認用の架空の記事です。",
+        "実際の報道ではありません。",
+        "原文リンクもサンプルです。"
+      ],
+      "analysis": {
+        "importance": "未評価",
+        "background": "未生成",
+        "why": "未生成",
+        "outlook": "未生成"
+      }
+    },
+    {
+      "id": "10534fd4c57f8a69960452d4",
+      "category": "経済",
+      "title": "【デモ】経済のサンプル記事",
+      "url": "https://example.com/2",
+      "source": "デモ（架空）",
+      "published": "",
+      "first_seen": "2026-10-04T21:19:17+09:00",
+      "summary": [
+        "これは動作確認用の架空の記事です。",
+        "実際の報道ではありません。",
+        "原文リンクもサンプルです。"
+      ],
+      "analysis": {
+        "importance": "未評価",
+        "background": "未生成",
+        "why": "未生成",
+        "outlook": "未生成"
+      }
+    },
+    {
+      "id": "2d395023221efc9151bf54dc",
+      "category": "国際",
+      "title": "【デモ】国際のサンプル記事",
+      "url": "https://example.com/3",
+      "source": "デモ（架空）",
+      "published": "",
+      "first_seen": "2026-10-04T21:19:17+09:00",
+      "summary": [
+        "これは動作確認用の架空の記事です。",
+        "実際の報道ではありません。",
+        "原文リンクもサンプルです。"
+      ],
+      "analysis": {
+        "importance": "未評価",
+        "background": "未生成",
+        "why": "未生成",
+        "outlook": "未生成"
+      }
+    },
+    {
+      "id": "5af70f50b6d9996eef0d6bbe",
+      "category": "水道・インフラ",
+      "title": "【デモ】水道・インフラのサンプル記事",
+      "url": "https://example.com/4",
+      "source": "デモ（架空）",
+      "published": "",
+      "first_seen": "2026-10-04T21:19:17+09:00",
+      "summary": [
+        "これは動作確認用の架空の記事です。",
+        "実際の報道ではありません。",
+        "原文リンクもサンプルです。"
+      ],
+      "analysis": {
+        "importance": "未評価",
+        "background": "未生成",
+        "why": "未生成",
+        "outlook": "未生成"
+      }
+    },
+    {
+      "id": "6ba7a06e00d4f77d0d9b0dd0",
+      "category": "無電柱化",
+      "title": "【デモ】無電柱化のサンプル記事",
+      "url": "https://example.com/5",
+      "source": "デモ（架空）",
+      "published": "",
+      "first_seen": "2026-10-04T21:19:17+09:00",
+      "summary": [
+        "これは動作確認用の架空の記事です。",
+        "実際の報道ではありません。",
+        "原文リンクもサンプルです。"
+      ],
+      "analysis": {
+        "importance": "未評価",
+        "background": "未生成",
+        "why": "未生成",
+        "outlook": "未生成"
+      }
+    },
+    {
+      "id": "5312667f8f8f354fcb40536c",
+      "category": "総合ニュース",
+      "title": "【デモ】総合ニュースのサンプル記事",
+      "url": "https://example.com/0",
+      "source": "デモ（架空）",
+      "published": "",
+      "first_seen": "2026-10-04T21:19:16+09:00",
+      "summary": [
+        "これは動作確認用の架空の記事です。",
+        "実際の報道ではありません。",
+        "原文リンクもサンプルです。"
+      ],
+      "analysis": {
+        "importance": "未評価",
+        "background": "未生成",
+        "why": "未生成",
+        "outlook": "未生成"
+      }
+    }
+  ]
+}
